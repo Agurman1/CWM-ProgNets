@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 # parameters to modify
 filename="test.data"
-label='label'
+label='iperf2'
 xlabel = 'xlabel'
 ylabel = 'ylabel'
 title='Simple plot'
