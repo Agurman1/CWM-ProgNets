@@ -3,6 +3,7 @@
 #include <v1model.p4>
 
 const bit<16> TYPE_IPV4 = 0x800;
+const bit<16> priceA = 0x64 /* boundary price is 100 */
 
 /*************************************************************************
 *********************** H E A D E R S  ***********************************
@@ -24,9 +25,8 @@ header ethernet_t {
 
 header TradeHeader {
 bit<1> action;
+bit<8> priceB; /* price received in the packet */]
 bit<8> quantity;
-bit<8> priceA;
-bit<8> priceB;
 }
 
 /* create an instance of this header to use for the match tables */
@@ -89,6 +89,18 @@ struct headers {
 /*************************************************************************
 *********************** P A R S E R  ***********************************
 *************************************************************************/
+parser TradeParser(packet_in packet,	
+		   out headers hdr, 
+	           inout metadata meta, 
+		   inout standard_metadata_t standard_metadata) {
+		   
+	state start {
+		packet.extract(trade);
+		hdr.trade = trade;/* assigned extracted value into our header structure */
+}
+
+	state accept {}
+}
 
 parser MyParser(packet_in packet,
                 out headers hdr,
@@ -137,17 +149,27 @@ control MyIngress(inout headers hdr,
                   
                   
      action buy() {
+     
+     	modify_field(hdr.trade.action, 1); /*set to value 1, positive on the trade */
+     	standard_metadata.egress_spec = standard_metadata.ingress_port;
     
     
     }
     
     action sell() {
     
+    	modify_field(hdr.trade.action, 0); /*set to value 0, positive on the trade */
+    	standard_metadata.egress_spec = standard_metadata.ingress_port;
+    	
+    }
+    
+    action NoAction() {
+    
+    /*empty */
     }
      table tradeTable{
 
 	key = {
-		trade.action : exact;
 		trade.quantity : exact;
 		trade.price : exact;
 }
@@ -155,14 +177,18 @@ control MyIngress(inout headers hdr,
 	actions = {
 		buy;
 		sell;
-		defaultAction;
+		NoAction();
 		}
 		
    apply {
-  if hdr.trade. 
-  }
+   
+  	if (hdr.trade.priceA >= hdr.trade.priceB){
+  		buy();
+  	}else (hdr.trade.priceA < hdr.trade.priceB){
+  		sell();
+  	}
 	
-		}
+   }
 }
     action drop() {
         mark_to_drop(standard_metadata);
